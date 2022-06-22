@@ -94,7 +94,7 @@ def post_process(input_image, outputs, draw=False):
     else:
         input_image = None
     if not len(indices):
-        return input_image, boxes, confidences
+        return input_image, [], 0
     else:
         index = np.argmax(confidences)
         return input_image, boxes[index], confidences[index]
