@@ -3,6 +3,10 @@ import os
 import cv2
 import numpy as np
 
+from cv_bridge import CvBridge
+import rospy
+from sensor_msgs.msg import Image
+
 # Constants.
 INPUT_WIDTH = 320
 INPUT_HEIGHT = 320
@@ -101,7 +105,14 @@ def post_process(input_image, outputs, draw=False):
 
 
 if __name__ == '__main__':
+    rospy.init_node("drone_detection")
     draw = True
+    
+    capture = cv2.VideoCapture(0)
+    capture.set(3, 640)
+    capture.set(4, 480)
+    topic = rospy.Publisher("camera/color/drone_detection", Image, queue_size=10)
+    bridge = CvBridge()
 
     modelWeights = "weights.onnx"
     net = cv2.dnn.readNet(modelWeights)
@@ -112,10 +123,12 @@ if __name__ == '__main__':
         classes = f.read().rstrip('\n').split('\n')
 
     images_dir = './test/images/'
-    for image in os.listdir(images_dir):
-        image_path = os.path.join(images_dir, image)
+    # for image in os.listdir(images_dir):
+    while True:
+        # image_path = os.path.join(images_dir, image)
         # Load image.
-        frame = cv2.imread(image_path)
+        # frame = cv2.imread(image_path)
+        success, frame = capture.read()
         # Give the weight files to the model and load the network using       them.
         # Process image.
         detections = pre_process(frame, net)
@@ -129,6 +142,9 @@ if __name__ == '__main__':
         label = 'Inference time: %.2f ms' % (t * 1000.0 / cv2.getTickFrequency())
 
         if img is not None:
-            # cv2.putText(img, label, (20, 40), FONT_FACE, FONT_SCALE,  (0, 0, 255), THICKNESS, cv2.LINE_AA)
-            cv2.imshow('Output', img)
+            cv2.putText(img, label, (20, 40), FONT_FACE, FONT_SCALE,  (0, 0, 255), THICKNESS, cv2.LINE_AA)
+            # cv2.imshow('Output', img)
+            image_message = bridge.cv2_to_imgmsg(img, encoding="passthrough")
+            topic.publish(image_message)
+            
             cv2.waitKey(300)
